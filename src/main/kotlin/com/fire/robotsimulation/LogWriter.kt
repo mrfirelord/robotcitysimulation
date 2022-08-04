@@ -14,7 +14,15 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 enum class BuildingStage { START, FINISH }
-class LogMsg(val robotName: String, val land: String, val cost: Int, val buildingStage: BuildingStage)
+class LogMsg(val robotName: String, val land: String, val cost: Int, val buildingStage: BuildingStage) {
+    fun getByteBuffer(): ByteBuffer {
+        val logLine = if (this.buildingStage == BuildingStage.START)
+            "Robot ${this.robotName} started building on ${this.land}. Cost => ${this.cost}\r\n".toByteArray()
+        else
+            "Robot ${this.robotName} finished building on ${this.land}. Cost => ${this.cost}\r\n".toByteArray()
+        return ByteBuffer.wrap(logLine)
+    }
+}
 
 class LogWriter(private val incomingChannel: ReceiveChannel<LogMsg>) {
     private val fileChannel: AsynchronousFileChannel = AsynchronousFileChannel.open(
@@ -27,20 +35,11 @@ class LogWriter(private val incomingChannel: ReceiveChannel<LogMsg>) {
         withContext(Dispatchers.IO) {
             for (msg in incomingChannel) {
                 numberOfMessagesInProgress.incrementAndGet()
-                val byteBuffer = getByteBuffer(msg)
+                val byteBuffer = msg.getByteBuffer()
                 fileChannel.writeWithinCoroutine(byteBuffer, currentPosition)
                 currentPosition += byteBuffer.capacity()
             }
         }
-    }
-
-    private fun getByteBuffer(msg: LogMsg): ByteBuffer {
-        val logLine = if (msg.buildingStage == BuildingStage.START)
-            "Robot ${msg.robotName} started building on ${msg.land}. Cost => ${msg.cost}\r\n".toByteArray()
-        else
-            "Robot ${msg.robotName} finished building on ${msg.land}. Cost => ${msg.cost}\r\n".toByteArray()
-        val byteBuffer = ByteBuffer.wrap(logLine)
-        return byteBuffer
     }
 
     private suspend fun AsynchronousFileChannel.writeWithinCoroutine(buf: ByteBuffer, position: Long): Int =
