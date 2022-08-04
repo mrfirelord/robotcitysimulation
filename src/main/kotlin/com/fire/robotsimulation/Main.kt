@@ -12,13 +12,13 @@ object Main {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val channel = Channel<NotifierMsg>(100)
+        val channel = Channel<LogMsg>(100)
         val time = measureTimeMillis {
-            val alternativeNotifier = AlternativeNotifier(channel)
+            val logWriter = LogWriter(channel)
             runBlocking {
-                launch { alternativeNotifier.startReceivingMessages() }
+                launch { logWriter.startReceivingMessages() }
                 createRobots().map { async { runOneRobot(it, channel) } }.awaitAll()
-                alternativeNotifier.waitForCompletion()
+                logWriter.waitForCompletion()
                 channel.close()
             }
         }
@@ -26,16 +26,16 @@ object Main {
         println(totalDelay)
     }
 
-    private suspend fun runOneRobot(robot: Robot, notifierChannel: SendChannel<NotifierMsg>) {
+    private suspend fun runOneRobot(robot: Robot, logChannel: SendChannel<LogMsg>) {
         var land = cityManager.pickUpLand()
         while (land != null) {
             val building = getBuildingWithRandomFeatures()
-            notifierChannel.send(NotifierMsg(robot.name, land.toString(), building.cost, BuildingStage.START))
+            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStage.START))
 
             buildHouse(robot, building)
 
             cityManager.finishBuilding(land)
-            notifierChannel.send(NotifierMsg(robot.name, land.toString(), building.cost, BuildingStage.FINISH))
+            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStage.FINISH))
             robot.finishBuilding(building)
 
             land = cityManager.pickUpLand()

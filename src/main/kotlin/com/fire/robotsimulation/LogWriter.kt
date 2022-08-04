@@ -1,25 +1,22 @@
 package com.fire.robotsimulation
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.channels.CompletionHandler
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
-import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 enum class BuildingStage { START, FINISH }
-class NotifierMsg(val robotName: String, val land: String, val cost: Int, val buildingStage: BuildingStage)
+class LogMsg(val robotName: String, val land: String, val cost: Int, val buildingStage: BuildingStage)
 
-class AlternativeNotifier(private val incomingChannel: ReceiveChannel<NotifierMsg>) {
+class LogWriter(private val incomingChannel: ReceiveChannel<LogMsg>) {
     private val fileChannel: AsynchronousFileChannel = AsynchronousFileChannel.open(
         Paths.get("C:\\temp\\log.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE
     )
@@ -37,7 +34,7 @@ class AlternativeNotifier(private val incomingChannel: ReceiveChannel<NotifierMs
         }
     }
 
-    private fun getByteBuffer(msg: NotifierMsg): ByteBuffer {
+    private fun getByteBuffer(msg: LogMsg): ByteBuffer {
         val logLine = if (msg.buildingStage == BuildingStage.START)
             "Robot ${msg.robotName} started building on ${msg.land}. Cost => ${msg.cost}\r\n".toByteArray()
         else
