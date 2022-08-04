@@ -3,23 +3,23 @@ package com.fire.robotsimulation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
-import kotlin.random.Random
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.measureTimeMillis
 
 object Main {
-    private var totalDelay = 0L
+    private val totalDelay = AtomicLong(0)
     private val cityManager = CityManager()
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val channel = Channel<LogMsg>(100)
+        val logMsgChannel = Channel<LogMsg>(100)
         val time = measureTimeMillis {
-            val logWriter = LogWriter(channel)
+            val logWriter = LogWriter(logMsgChannel)
             runBlocking {
                 launch { logWriter.startReceivingMessages() }
-                createRobots().map { async { runOneRobot(it, channel) } }.awaitAll()
+                createRobots().map { async { runOneRobot(it, logMsgChannel) } }.awaitAll()
                 logWriter.waitForCompletion()
-                channel.close()
+                logMsgChannel.close()
             }
         }
         println(time)
@@ -43,26 +43,13 @@ object Main {
     }
 
     private fun getBuildingWithRandomFeatures(): Building {
-        val features = mutableListOf<Feature>()
-        var randomBits = Random.nextBits(Feature.values().size)
-        var featureIndex = 0
-        var totalCost = 0
-        while (randomBits > 0) {
-            if (randomBits and 1 == 1) {
-                features.add(Feature.values()[featureIndex])
-                totalCost += 10
-            }
-
-            featureIndex++
-            randomBits = randomBits shr 1
-        }
-
-        return Building(features, totalCost)
+        val features = BuildingFeature.getRandomFeatures()
+        return Building(features, features.size * 10)
     }
 
     private suspend fun buildHouse(robot: Robot, building: Building) {
         val buildingTime = building.features.size * 10L
-        totalDelay += buildingTime
+        totalDelay.accumulateAndGet(buildingTime) { l, r -> l + r }
 //        delay(buildingTime)
     }
 }

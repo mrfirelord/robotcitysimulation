@@ -14,7 +14,12 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 enum class BuildingStage { START, FINISH }
-class LogMsg(val robotName: String, val land: String, val cost: Int, val buildingStage: BuildingStage) {
+class LogMsg(
+    private val robotName: String,
+    private val land: String,
+    private val cost: Int,
+    private val buildingStage: BuildingStage
+) {
     fun getByteBuffer(): ByteBuffer {
         val logLine = if (this.buildingStage == BuildingStage.START)
             "Robot ${this.robotName} started building on ${this.land}. Cost => ${this.cost}\r\n".toByteArray()

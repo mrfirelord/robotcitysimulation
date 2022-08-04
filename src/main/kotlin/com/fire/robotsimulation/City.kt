@@ -9,7 +9,7 @@ data class Land(val cityName: String, val row: Int, val column: Int) {
     override fun toString() = "$cityName|$row|$column"
 }
 
-class Building(val features: List<Feature>, val cost: Int)
+class Building(val features: List<BuildingFeature>, val cost: Int)
 
 const val CITY_COUNT = 1
 const val CITY_ROWS = 100
@@ -26,14 +26,11 @@ class CityManager {
 
     init {
         cities = loadCities()
-        for (cityIndex in cities.indices) {
-            for (row in 0 until CITY_ROWS) {
-                for (column in 0 until CITY_COLUMNS) {
+        for (cityIndex in cities.indices)
+            for (row in 0 until CITY_ROWS)
+                for (column in 0 until CITY_COLUMNS)
                     emptyLands[cityIndex * (CITY_ROWS * CITY_COLUMNS) + row * CITY_COLUMNS + column] =
                         Land(cities[cityIndex].name, row, column)
-                }
-            }
-        }
     }
 
     /** Returns available land from random city. Returns null if no land is available */
@@ -58,10 +55,10 @@ class CityManager {
         landsWithInProgressBuilding.remove(land)
     }
 
-    fun loadCities(): List<City> = (0 until CITY_COUNT).map { City("City $it", CITY_ROWS, CITY_COLUMNS) }
+    private fun loadCities(): List<City> = (0 until CITY_COUNT).map { City("City $it", CITY_ROWS, CITY_COLUMNS) }
 }
 
-enum class Feature {
+enum class BuildingFeature {
     FEATURE0,
     FEATURE1,
     FEATURE2,
@@ -71,5 +68,21 @@ enum class Feature {
     FEATURE6,
     FEATURE7,
     FEATURE8,
-    FEATURE9
+    FEATURE9;
+
+    companion object {
+        fun getRandomFeatures(): List<BuildingFeature> {
+            val features = mutableListOf<BuildingFeature>()
+            var randomBits = Random.nextBits(values().size)
+            var featureIndex = 0
+            while (randomBits > 0) {
+                if (randomBits and 1 == 1)
+                    features.add(values()[featureIndex])
+
+                featureIndex++
+                randomBits = randomBits shr 1
+            }
+            return features
+        }
+    }
 }
