@@ -1,5 +1,7 @@
 package com.fire.robotsimulation
 
+import com.github.jasync.sql.db.asSuspending
+import com.github.jasync.sql.db.mysql.MySQLConnectionBuilder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -12,6 +14,11 @@ object Main {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val connection = MySQLConnectionBuilder.createConnectionPool(
+            "jdbc:mysql://127.0.0.1:3306/robotsimulation?user=app&password=159753"
+        )
+        val buildingDao = BuildingDao(connection.asSuspending)
+
         val logMsgChannel = Channel<LogMsg>(100)
         val time = measureTimeMillis {
             val logWriter = LogWriter(logMsgChannel)
@@ -30,12 +37,12 @@ object Main {
         var land = cityManager.pickUpLand()
         while (land != null) {
             val building = getBuildingWithRandomFeatures()
-            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStage.START))
+            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.IN_PROGRESS))
 
             buildHouse(robot, building)
 
             cityManager.finishBuilding(land)
-            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStage.FINISH))
+            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.COMPLETED))
             robot.finishBuilding(building)
 
             land = cityManager.pickUpLand()

@@ -13,15 +13,14 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-enum class BuildingStage { START, FINISH }
 class LogMsg(
     private val robotName: String,
     private val land: String,
     private val cost: Int,
-    private val buildingStage: BuildingStage
+    private val buildingStatus: BuildingStatus
 ) {
     fun getByteBuffer(): ByteBuffer {
-        val logLine = if (this.buildingStage == BuildingStage.START)
+        val logLine = if (this.buildingStatus == BuildingStatus.IN_PROGRESS)
             "Robot ${this.robotName} started building on ${this.land}. Cost => ${this.cost}\r\n".toByteArray()
         else
             "Robot ${this.robotName} finished building on ${this.land}. Cost => ${this.cost}\r\n".toByteArray()
