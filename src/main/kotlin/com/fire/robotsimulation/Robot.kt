@@ -21,9 +21,12 @@ val ROBOT_NAMES = listOf(
 class Robot(val name: String) {
     var earnedGold: Int = 0
 
-    fun finishBuilding(building: Building) {
+    /** Returns time spend on building */
+    suspend fun buildHouse(building: Building): Int {
+        val result = building.features.size * 10
+//        delay(buildingTime)
         earnedGold += building.cost
-        // add/update skills
+        return result
     }
 
     override fun toString() = name

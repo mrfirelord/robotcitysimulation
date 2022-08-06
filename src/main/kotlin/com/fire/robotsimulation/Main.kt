@@ -39,11 +39,11 @@ object Main {
             val building = getBuildingWithRandomFeatures()
             logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.IN_PROGRESS))
 
-            buildHouse(robot, building)
+            val buildingTime = robot.buildHouse(building)
+            totalDelay.accumulateAndGet(buildingTime.toLong()) { l, r -> l + r }
 
             cityManager.finishBuilding(land)
             logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.COMPLETED))
-            robot.finishBuilding(building)
 
             land = cityManager.pickUpLand()
         }
@@ -52,11 +52,5 @@ object Main {
     private fun getBuildingWithRandomFeatures(): Building {
         val features = BuildingFeature.getRandomFeatures()
         return Building(features, features.size * 10)
-    }
-
-    private suspend fun buildHouse(robot: Robot, building: Building) {
-        val buildingTime = building.features.size * 10L
-        totalDelay.accumulateAndGet(buildingTime) { l, r -> l + r }
-//        delay(buildingTime)
     }
 }
