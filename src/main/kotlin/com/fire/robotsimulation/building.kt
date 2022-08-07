@@ -13,18 +13,25 @@ data class BuildingRow(
 )
 
 class BuildingDao(private val connection: SuspendingConnection) {
-    suspend fun insert(cityName: String, row: Int, column: Int, robotName: String, status: BuildingStatus) {
+    suspend fun clearAllData() {
+        connection.sendPreparedStatement("DELETE FROM `temp`", listOf())
+    }
+
+    suspend fun insertInProgress(land: Land, robotName: String) {
         connection.sendPreparedStatement(
-            "INSERT INTO `building` (`city_name`, `row`, `column`, `robot_name`, `status`) " +
-                    "VALUES               (?,           $row,  $column,  ?,             ?)",
-            listOf(cityName, robotName, status.toString())
+            "INSERT INTO `building` (`city_name`, `row`,        `column`,       `robot_name`, `status`) " +
+                    "VALUES               (?,           ${land.row},  ${land.column}, ?,             ?)",
+            values = listOf(land.cityName, robotName, BuildingStatus.IN_PROGRESS.toString()),
+            release = true
         )
     }
 
-    suspend fun updateStatus(cityName: String, row: Int, column: Int, status: String) {
+    suspend fun completeBuilding(land: Land) {
         connection.sendPreparedStatement(
-            "UPDATE `building` SET `status` = ? WHERE `city_name` = ? AND `row` = $row AND `column` = $column",
-            listOf(status, cityName)
+            "UPDATE `building` SET `status` = ? " +
+                    "WHERE `city_name` = ? AND `row` = ${land.row} AND `column` = ${land.column}",
+            listOf(BuildingStatus.COMPLETED.toString(), land.cityName),
+            release = true
         )
     }
 

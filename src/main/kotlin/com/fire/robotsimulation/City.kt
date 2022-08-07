@@ -40,7 +40,7 @@ class CityManager {
             if (emptyLandEndElementIndex == 0)
                 return null
 
-            val randomIndex = Random.nextInt(landCount)
+            val randomIndex = Random.nextInt(emptyLandEndElementIndex)
             val land = emptyLands[randomIndex]
             emptyLandEndElementIndex--
             emptyLands[randomIndex] = emptyLands[emptyLandEndElementIndex]

@@ -11,20 +11,28 @@ import kotlin.system.measureTimeMillis
 object Main {
     private val totalDelay = AtomicLong(0)
     private val cityManager = CityManager()
+    private val connectionPool = MySQLConnectionBuilder.createConnectionPool {
+        host = "127.0.0.1"
+        port = 3306
+        database = "robotsimulation"
+        username = "app"
+        password = "159753"
+        maxActiveConnections = 100
+    }
+    private val buildingDao = BuildingDao(connectionPool.asSuspending)
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val connection = MySQLConnectionBuilder.createConnectionPool(
-            "jdbc:mysql://127.0.0.1:3306/robotsimulation?user=app&password=159753"
-        )
-        val buildingDao = BuildingDao(connection.asSuspending)
-
         val logMsgChannel = Channel<LogMsg>(100)
         val time = measureTimeMillis {
             val logWriter = LogWriter(logMsgChannel)
             runBlocking {
+                async { buildingDao.clearAllData() }.join()
+
                 launch { logWriter.startReceivingMessages() }
-                createRobots().map { async { runOneRobot(it, logMsgChannel) } }.awaitAll()
+                createRobots().map {
+                    launch(Dispatchers.Default) { runOneRobot(it, logMsgChannel) }
+                }.joinAll()
                 logWriter.waitForCompletion()
                 logMsgChannel.close()
             }
@@ -38,13 +46,15 @@ object Main {
         while (land != null) {
             val building = getBuildingWithRandomFeatures()
             logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.IN_PROGRESS))
+            // TODO make inserting into db and building house parallel
+            buildingDao.insertInProgress(land, robotName = robot.name)
 
             val buildingTime = robot.buildHouse(building)
-            totalDelay.accumulateAndGet(buildingTime.toLong()) { l, r -> l + r }
-
             cityManager.finishBuilding(land)
-            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.COMPLETED))
+            buildingDao.completeBuilding(land)
 
+            logChannel.send(LogMsg(robot.name, land.toString(), building.cost, BuildingStatus.COMPLETED))
+            totalDelay.accumulateAndGet(buildingTime.toLong()) { l, r -> l + r }
             land = cityManager.pickUpLand()
         }
     }
